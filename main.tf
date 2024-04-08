@@ -108,7 +108,7 @@ EOF
 resource "aws_instance" "dev-instance-linux2-slave" {
   ami                         = "ami-018ba43095ff50d08"
   instance_type               = "t2.micro"
-  key_name                    = "ambience-developer-cloud"
+#  key_name                    = "ambience-developer-cloud"
   availability_zone           = "us-east-1b"
   tenancy                     = "default"
   subnet_id                   = aws_subnet.terraform-public-subnet-slave.id # Public Subnet A
@@ -167,11 +167,31 @@ EOF
 
 # Implement VPC EP
 
-resource "aws_s3_bucket" s3
+# create S3 bucket
+resource "aws_s3_bucket" s3 {
+  bucket = var.bucket_name
+  
+  tags = {
+    Name = "test-vpc-ep"
+    Environment = "VPC-EndPoint-test"
+  }
+}
+
+resource "aws_s3_bucket_acl" "s3_acl" {
+  bucket = aws_s3_bucket.s3.id
+
+  acl = "private"
+}
 
 resource "aws_vpc_endpoint" "s3" {
   vpc_id       = aws_vpc.terraform-default-vpc-master.id
-  service_name = "com.amazonaws.us-west-2.s3"
+  service_name = "com.amazonaws.us-east-1.s3"
+}
+
+# associate route table with VPC endpoint
+resource "aws_vpc_endpoint_route_table_association" "vpc-endpoint-route-table-s3" {
+  route_table_id = aws_route_table.terraform-public-route-table-master.id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
 }
 
  # Remove this for VPC peering
