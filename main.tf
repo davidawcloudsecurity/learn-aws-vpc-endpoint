@@ -14,7 +14,7 @@ provider "aws" {
 resource "aws_instance" "dev-instance-linux2-master" {
   ami                         = "ami-018ba43095ff50d08"
   instance_type               = "t2.micro"
-  key_name                    = "ambience-developer-cloud"
+#  key_name                    = "ambience-developer-cloud"
   availability_zone           = "us-east-1a"
   tenancy                     = "default"
   subnet_id                   = aws_subnet.terraform-public-subnet-master.id # Public Subnet A
@@ -55,7 +55,7 @@ else
     echo "File $sshd_config not found."
 fi
 
-echo "Letmein2021" | passwd --stdin ec2-user
+echo "123" | passwd --stdin ec2-user
 systemctl restart sshd
 
 # Install Docker
@@ -156,7 +156,7 @@ if [ -e "$sshd_config" ]; then
 else
     echo "File $sshd_config not found."
 fi
-echo "Letmein2021" | passwd --stdin ec2-user
+echo "123" | passwd --stdin ec2-user
 systemctl restart sshd
 EOF
 
@@ -165,6 +165,17 @@ EOF
   }
 }
 
+# Implement VPC EP
+
+resource "aws_s3_bucket" s3
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.terraform-default-vpc-master.id
+  service_name = "com.amazonaws.us-west-2.s3"
+}
+
+ # Remove this for VPC peering
+/*
 # VPC Peering
 resource "aws_vpc_peering_connection" "default-peering-slave" {
   # peer_owner_id = var.peer_owner_id
@@ -175,7 +186,7 @@ resource "aws_vpc_peering_connection" "default-peering-slave" {
     Name = "VPC Peering between master and slave"
   }
 }
-
+*/
 resource "aws_vpc" "terraform-default-vpc-master" {
   cidr_block           = "10.10.0.0/16"
   enable_dns_support   = true
@@ -245,11 +256,14 @@ resource "aws_route_table" "terraform-public-route-table-master" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.terraform-default-igw-master.id
   }
+
+  # Remove this for VPC peering
+  /*
   route {
-    cidr_block    = aws_vpc.terraform-default-vpc-slave.cidr_block
-    vpc_peering_connection_id = aws_vpc_peering_connection.default-peering-slave.id   
+    cidr_block                = aws_vpc.terraform-default-vpc-slave.cidr_block
+    vpc_peering_connection_id = aws_vpc_peering_connection.default-peering-slave.id
   }
-    
+  */
   tags = {
     Name = "terraform-public-route-table-master"
   }
@@ -277,11 +291,13 @@ resource "aws_route_table" "terraform-public-route-table-slave" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.terraform-default-igw-slave.id
   }
-    route {
-    cidr_block = aws_vpc.terraform-default-vpc-master.cidr_block
-    vpc_peering_connection_id = aws_vpc_peering_connection.default-peering-slave.id 
+   # Remove this for VPC peering
+  /*
+  route {
+    cidr_block                = aws_vpc.terraform-default-vpc-master.cidr_block
+    vpc_peering_connection_id = aws_vpc_peering_connection.default-peering-slave.id
   }
-
+  */
   tags = {
     Name = "terraform-public-route-table-slave"
   }
@@ -299,11 +315,11 @@ resource "aws_route_table" "terraform-private-route-table-slave" {
   vpc_id = aws_vpc.terraform-default-vpc-slave.id
 
   # Comment this out to cut cost and focus on igw only
-/*  route {
+  /*  route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_nat_gateway.terraform-ngw.id
   }
-*/  
+*/
   tags = {
     Name = "terraform-private-route-table-slave"
   }
